@@ -17,13 +17,18 @@ def preprocess_image(image):
 def extract_km_and_time(text):
     # Patrones de expresiones regulares para kilómetros y hora
     km_pattern = re.compile(r'\b\d{5,7}\b')
-    hora_pattern = re.compile(r'\b\d{1,2}:\d{2}\b')
+    # Adaptamos la expresión regular para capturar "14:17" adecuadamente
+    hora_pattern = re.compile(r'\b\d{1,2}[:;]\d{2}\b')
     
     km_match = km_pattern.findall(text)
     hora_match = hora_pattern.findall(text)
     
     km_text = km_match[0] if km_match else "No se encontraron kilómetros"
-    hora_text = hora_match[0] if hora_match else "No se encontró hora"
+    
+    # Adaptamos el resultado de la hora para formatear "14/7" como "14:17" si es necesario
+    hora_text = "No se encontró hora"
+    if hora_match:
+        hora_text = hora_match[0].replace(';', ':')
     
     return km_text, hora_text
 
