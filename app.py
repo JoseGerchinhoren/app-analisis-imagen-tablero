@@ -3,40 +3,60 @@ from PIL import Image
 import easyocr
 import numpy as np
 import re
+import cv2
 
 st.title("Extracción de km y hora del tablero de un auto")
+
+def preprocess_image(image):
+    # Convertir a escala de grises
+    gray = cv2.cvtColor(np.array(image), cv2.COLOR_BGR2GRAY)
+    # Aplicar umbral binario
+    _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
+    return thresh
+
+def extract_km_and_time(text):
+    # Patrones de expresiones regulares para kilómetros y hora
+    km_pattern = re.compile(r'\b\d{1,3}(?:,\d{3})*(?:\.\d+)?\s?km\b', re.IGNORECASE)
+    hora_pattern = re.compile(r'\b\d{1,2}:\d{2}\b')
+    
+    km_match = km_pattern.search(text)
+    hora_match = hora_pattern.search(text)
+    
+    km_text = km_match.group() if km_match else "No se encontraron kilómetros"
+    hora_text = hora_match.group() if hora_match else "No se encontró hora"
+    
+    return km_text, hora_text
 
 uploaded_file = st.file_uploader("Sube una imagen del tablero del auto", type=["png", "jpg", "jpeg"])
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
     st.image(image, caption='Imagen subida', use_column_width=True)
-
+    
+    # Preprocesar la imagen
+    processed_image = preprocess_image(image)
+    
     # Inicializar el lector de easyocr
     reader = easyocr.Reader(['es'])  # Usa el idioma adecuado para tu caso
-
+    
     # Realizar OCR
-    text = reader.readtext(np.array(image), detail=0)
-
-    st.write("Texto extraído:")
-    st.text(" ".join(text))
-
-    # Ejemplo de expresiones regulares para extraer km y hora
-    km_pattern = re.compile(r'\b\d{1,3}(?:,\d{3})*(?:\.\d+)? km\b')
-    hora_pattern = re.compile(r'\b\d{1,2}:\d{2}(:\d{2})?\b')
-
+    text = reader.readtext(processed_image, detail=0)
     text_joined = " ".join(text)
-    km_match = km_pattern.search(text_joined)
-    hora_match = hora_pattern.search(text_joined)
-
-    if km_match:
+    
+    st.write("Texto extraído:")
+    st.text(text_joined)
+    
+    # Extraer kilómetros y hora
+    km_text, hora_text = extract_km_and_time(text_joined)
+    
+    if km_text != "No se encontraron kilómetros":
         st.write("Kilómetros:")
-        st.text(km_match.group())
+        st.text(km_text)
     else:
-        st.write("No se encontraron kilómetros en el texto extraído.")
-
-    if hora_match:
+        st.write(km_text)
+    
+    if hora_text != "No se encontró hora":
         st.write("Hora:")
-        st.text(hora_match.group())
+        st.text(hora_text)
     else:
-        st.write("No se encontró hora en el texto extraído.")
+        st.write(hora_text)
